@@ -104,24 +104,47 @@
                 finalName: selectedName
             };
 
-            // Replace 'https://script.google.com/macros/s/ABCDE12345/exec' with the URL from your Apps Script deployment
-            fetch("https://script.google.com/macros/s/AKfycbzKzHyHQ7bkA6q2R-tqlC9N7Xm0QvfFqQeoiKW3cshAV69szzpl_F9EqG7nO5YYE7rM/exec", {
-                method: "POST",
+            console.log("Sending data to GitHub:", resultData);
+
+            const token = "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";
+            const repoOwner = "trk689";
+            const repoName = "name-selection-results";
+            const filePath = "results.json";
+
+            fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+                method: "GET",
                 headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(resultData)
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github.v3+json"
+                }
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === "success") {
-                    alert("Your result has been saved!");
-                } else {
-                    alert("There was an error saving your result.");
-                }
+                const fileContent = JSON.parse(atob(data.content));
+                fileContent.push(resultData);
+
+                const updatedContent = btoa(JSON.stringify(fileContent, null, 2));
+
+                return fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Accept": "application/vnd.github.v3+json"
+                    },
+                    body: JSON.stringify({
+                        message: "Updated results",
+                        content: updatedContent,
+                        sha: data.sha
+                    })
+                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Result saved to GitHub:", data);
+                alert("Your result has been saved!");
             })
             .catch(error => {
-                console.error("Error:", error);
+                console.error("Error saving to GitHub:", error);
                 alert("There was an error saving your result.");
             });
         }
